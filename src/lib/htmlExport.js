@@ -133,14 +133,33 @@ function radarSVG(rows, prevRows) {
 </svg>`;
 }
 
+function wrapForSVG(text, maxChars = 22) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? current + " " + word : word;
+    if (next.length <= maxChars) current = next;
+    else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 function valuesBarSVG(rows) {
-  const w = 480;
-  const h = 220;
+  const labelLines = rows.map((r) => wrapForSVG(r.label, 22));
+  const maxLines = labelLines.reduce((acc, l) => Math.max(acc, l.length), 1);
+  const labelBlockH = maxLines * 11 + 12;
+  const w = 560;
   const padL = 40;
-  const padB = 30;
+  const padB = labelBlockH + 24;
   const padT = 10;
+  const chartH = 200;
+  const h = padT + chartH + padB;
   const usableW = w - padL - 12;
-  const usableH = h - padT - padB;
   const groupW = usableW / Math.max(1, rows.length);
   const max = 5;
   const colours = { Self: "#434343", Peers: "#02614b", Manager: "#fc5c40" };
@@ -152,34 +171,41 @@ function valuesBarSVG(rows) {
     const x0 = padL + i * groupW + 6;
     series.forEach((s, j) => {
       const val = row[s] || 0;
-      const bh = (val / max) * usableH;
+      const bh = (val / max) * chartH;
       const x = x0 + j * barW;
-      const y = padT + (usableH - bh);
+      const y = padT + (chartH - bh);
       bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(barW - 2).toFixed(1)}" height="${bh.toFixed(1)}" fill="${colours[s]}"/>`;
     });
   });
 
   const xLabels = rows
-    .map(
-      (row, i) =>
-        `<text x="${(padL + i * groupW + groupW / 2).toFixed(1)}" y="${(h - 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#434343">${esc(row.label)}</text>`
-    )
+    .map((row, i) => {
+      const cx = padL + i * groupW + groupW / 2;
+      const baseY = padT + chartH + 14;
+      const tspans = labelLines[i]
+        .map(
+          (line, idx) =>
+            `<tspan x="${cx.toFixed(1)}" dy="${idx === 0 ? 0 : 11}">${esc(line)}</tspan>`
+        )
+        .join("");
+      return `<text x="${cx.toFixed(1)}" y="${baseY.toFixed(1)}" text-anchor="middle" font-size="9" fill="#434343">${tspans}</text>`;
+    })
     .join("");
 
   const yTicks = [0, 1, 2, 3, 4, 5]
     .map(
       (v) => `
-      <line x1="${padL}" x2="${w - 6}" y1="${(padT + ((max - v) / max) * usableH).toFixed(1)}" y2="${(padT + ((max - v) / max) * usableH).toFixed(1)}" stroke="#eee" />
-      <text x="${(padL - 6).toFixed(1)}" y="${(padT + ((max - v) / max) * usableH + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#999">${v}</text>`
+      <line x1="${padL}" x2="${w - 6}" y1="${(padT + ((max - v) / max) * chartH).toFixed(1)}" y2="${(padT + ((max - v) / max) * chartH).toFixed(1)}" stroke="#eee" />
+      <text x="${(padL - 6).toFixed(1)}" y="${(padT + ((max - v) / max) * chartH + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#999">${v}</text>`
     )
     .join("");
 
   return `
-<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" width="100%" style="max-width:520px;display:block;margin:0 auto">
+<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" width="100%" style="max-width:600px;display:block;margin:0 auto">
   ${yTicks}
   ${bars}
   ${xLabels}
-  <g transform="translate(${padL}, ${h - 2})" font-size="9">
+  <g transform="translate(${padL}, ${h - 4})" font-size="9">
     <text fill="#434343">■ Self <tspan dx="6" fill="#02614b">■ Peers</tspan> <tspan dx="6" fill="#fc5c40">■ Manager</tspan></text>
   </g>
 </svg>`;
@@ -251,7 +277,7 @@ function renderOverview(data, prevData, results, t) {
 
 function renderValues(data, t) {
   const rows = (data.valSummary || []).map((v) => ({
-    label: v.short,
+    label: v.full,
     Self: v.selfScore || 0,
     Peers: v.peerAvg || 0,
     Manager: v.managerScore || 0,
@@ -267,8 +293,7 @@ function renderValues(data, t) {
     .map(
       (v) => `
     <div class="card">
-      <h3>${esc(v.short)}</h3>
-      <p class="muted"><em>"${esc(v.full)}"</em></p>
+      <h3>${esc(v.full)}</h3>
       <div class="row">
         <div class="stat"><div class="label">${esc(t("overview.self"))}</div><div class="val">${v.selfScore ?? "—"}</div></div>
         <div class="stat"><div class="label">${esc(t("overview.peerAvg"))}</div><div class="val pos">${v.peerAvg ?? "—"}</div></div>
