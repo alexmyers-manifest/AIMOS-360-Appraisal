@@ -10,18 +10,20 @@ import {
   saveSession,
   clearSession,
 } from "./lib/storage.js";
+import { downloadExport } from "./lib/htmlExport.js";
+import { buildWordCloud } from "./lib/wordcloud.js";
 import SignIn from "./components/SignIn.jsx";
 import Upload from "./components/Upload.jsx";
+import TitleModule from "./components/TitleModule.jsx";
 import Overview from "./components/Overview.jsx";
-import Analysis from "./components/Analysis.jsx";
 import Values from "./components/Values.jsx";
 import Synthesis from "./components/Synthesis.jsx";
 import Objectives from "./components/Objectives.jsx";
 import Development from "./components/Development.jsx";
 import Compare from "./components/Compare.jsx";
+import AppraisalInfo from "./components/AppraisalInfo.jsx";
 import Admin from "./components/Admin.jsx";
 import Roundel from "./components/Roundel.jsx";
-import PrintView from "./components/PrintView.jsx";
 
 export default function App() {
   const [me, setMe] = useState(null);
@@ -33,7 +35,14 @@ export default function App() {
   const [prevData, setPrevData] = useState(null);
   const [tab, setTab] = useState("overview");
 
-  const [results, setResults] = useState({ synthesis: null, objectives: null, development: null });
+  const [results, setResults] = useState({
+    synthesis: null,
+    objectives: null,
+    development: null,
+    overviewStatement: "",
+    savedAt: null,
+    lastEditAt: null,
+  });
   const [loading, setLoading] = useState({ synthesis: false, objectives: false, development: false });
   const [errors, setErrors] = useState({ synthesis: null, objectives: null, development: null });
 
@@ -43,6 +52,7 @@ export default function App() {
   const [hydrated, setHydrated] = useState(false);
 
   const t = useMemo(() => makeT(lang), [lang]);
+  const viewMode = lmView ? "lm" : "normal";
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash === "#admin" ? "admin" : "app");
@@ -70,7 +80,6 @@ export default function App() {
       });
   }, []);
 
-  // Hydrate session and history once we have a signed-in user
   useEffect(() => {
     if (!me?.email || hydrated) return;
     const session = loadSession(me.email);
@@ -84,13 +93,11 @@ export default function App() {
     setHydrated(true);
   }, [me, hydrated]);
 
-  // Persist session on changes
   useEffect(() => {
     if (!me?.email || !hydrated) return;
     saveSession(me.email, { data, prevData, results, lmView });
   }, [me, hydrated, data, prevData, results, lmView]);
 
-  // Persist to history when data is present and AI results land
   useEffect(() => {
     if (!me?.email || !hydrated || !data?.employee) return;
     const next = saveToHistory(me.email, {
@@ -102,9 +109,19 @@ export default function App() {
       synthesis: results.synthesis,
       objectives: results.objectives,
       development: results.development,
+      overviewStatement: results.overviewStatement,
     });
     setHistory(next);
-  }, [me, hydrated, data, prevData, results.synthesis, results.objectives, results.development]);
+  }, [
+    me,
+    hydrated,
+    data,
+    prevData,
+    results.synthesis,
+    results.objectives,
+    results.development,
+    results.overviewStatement,
+  ]);
 
   function onSignedIn(token) {
     setStoredToken(token);
@@ -128,7 +145,14 @@ export default function App() {
     setMe(null);
     setData(null);
     setPrevData(null);
-    setResults({ synthesis: null, objectives: null, development: null });
+    setResults({
+      synthesis: null,
+      objectives: null,
+      development: null,
+      overviewStatement: "",
+      savedAt: null,
+      lastEditAt: null,
+    });
     setHistory([]);
     setHydrated(false);
     disableAutoSelect();
@@ -141,7 +165,12 @@ export default function App() {
     setErrors((e) => ({ ...e, [type]: null }));
     try {
       const out = await api.generate(type, data, lang);
-      setResults((r) => ({ ...r, [type]: out }));
+      setResults((r) => ({
+        ...r,
+        [type]: out,
+        savedAt: r.savedAt || new Date().toISOString(),
+        lastEditAt: new Date().toISOString(),
+      }));
     } catch (e) {
       setErrors((er) => ({ ...er, [type]: e.message }));
     } finally {
@@ -149,7 +178,6 @@ export default function App() {
     }
   }
 
-  // Chained AI generation
   useEffect(() => {
     if (!data || results.synthesis || loading.synthesis) return;
     runGenerator("synthesis");
@@ -180,6 +208,9 @@ export default function App() {
       synthesis: h.synthesis || null,
       objectives: h.objectives || null,
       development: h.development || null,
+      overviewStatement: h.overviewStatement || "",
+      savedAt: h.savedAt || null,
+      lastEditAt: h.savedAt || null,
     });
     setErrors({ synthesis: null, objectives: null, development: null });
     setTab("overview");
@@ -191,34 +222,67 @@ export default function App() {
     setHistory(next);
   }
 
-  // Editable mutations
+  const updateOverviewStatement = (v) =>
+    setResults((r) => ({ ...r, overviewStatement: v, lastEditAt: new Date().toISOString() }));
+
   const updateObjective = (i, patch) =>
     setResults((r) => {
       if (!r.objectives) return r;
       const list = (r.objectives.objectives || []).slice();
       list[i] = { ...list[i], ...patch };
-      return { ...r, objectives: { ...r.objectives, objectives: list } };
+      return {
+        ...r,
+        objectives: { ...r.objectives, objectives: list },
+        lastEditAt: new Date().toISOString(),
+      };
     });
   const updateDevRoot = (patch) =>
-    setResults((r) => (r.development ? { ...r, development: { ...r.development, ...patch } } : r));
+    setResults((r) =>
+      r.development
+        ? { ...r, development: { ...r.development, ...patch }, lastEditAt: new Date().toISOString() }
+        : r
+    );
   const updateOpportunity = (i, patch) =>
     setResults((r) => {
       if (!r.development) return r;
       const list = (r.development.opportunities || []).slice();
       list[i] = { ...list[i], ...patch };
-      return { ...r, development: { ...r.development, opportunities: list } };
+      return {
+        ...r,
+        development: { ...r.development, opportunities: list },
+        lastEditAt: new Date().toISOString(),
+      };
     });
   const updateBook = (i, patch) =>
     setResults((r) => {
       if (!r.development) return r;
       const list = (r.development.books || []).slice();
       list[i] = { ...list[i], ...patch };
-      return { ...r, development: { ...r.development, books: list } };
+      return {
+        ...r,
+        development: { ...r.development, books: list },
+        lastEditAt: new Date().toISOString(),
+      };
     });
+
+  function exportPdf() {
+    if (!data) return;
+    const words = buildWordCloud(data.openFeedback, lang, 40);
+    downloadExport({
+      data,
+      prevData,
+      results,
+      words,
+      view: viewMode,
+      lang,
+      t,
+      conductedBy: me?.email,
+    });
+  }
 
   if (view === "loading") {
     return (
-      <div className="shell screen-only">
+      <div className="shell">
         <p className="muted">
           <span className="spinner" />Loading…
         </p>
@@ -239,7 +303,7 @@ export default function App() {
             You're signed in as <strong>{me?.email}</strong>, but this account isn't on the AIMOS
             allowlist yet. Ask an admin (Alex or Kellie) to add you, then refresh.
           </p>
-          <button className="btn-secondary btn" onClick={signOut}>{t("header.signout")}</button>
+          <button className="pill-btn" onClick={signOut}>{t("header.signout")}</button>
         </div>
       </div>
     );
@@ -261,158 +325,175 @@ export default function App() {
 
   const TABS = [
     { key: "overview", label: t("tab.overview") },
-    { key: "analysis", label: t("tab.analysis") },
     { key: "values", label: t("tab.values") },
     { key: "synthesis", label: t("tab.synthesis") },
     { key: "objectives", label: t("tab.objectives") },
     { key: "development", label: t("tab.development") },
     ...(prevData ? [{ key: "compare", label: t("tab.compare") }] : []),
+    { key: "info", label: t("tab.info") },
   ];
 
-  const viewMode = lmView ? "lm" : "normal";
+  function uploadDifferent() {
+    setData(null);
+    setPrevData(null);
+    setResults({
+      synthesis: null,
+      objectives: null,
+      development: null,
+      overviewStatement: "",
+      savedAt: null,
+      lastEditAt: null,
+    });
+    setErrors({ synthesis: null, objectives: null, development: null });
+  }
 
   return (
-    <>
-      <div className="shell screen-only">
-        <header className="header no-print">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Roundel size={36} />
-            <div>
-              <h1 style={{ lineHeight: 1.1 }}>AIMOS 360º Review</h1>
-              <div className="muted" style={{ fontSize: 12 }}>{t("app.tagline")}</div>
-            </div>
+    <div className="shell">
+      <header className="header">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Roundel size={36} />
+          <div>
+            <h1 style={{ lineHeight: 1.1 }}>AIMOS 360º Review</h1>
+            <div className="muted" style={{ fontSize: 12 }}>{t("app.tagline")}</div>
           </div>
-          <div className="who" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <select
-              className="lang-select"
-              value={lang}
-              onChange={(e) => changeLang(e.target.value)}
-              title={t("header.language")}
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>{l.label}</option>
-              ))}
-            </select>
-            {data && (
-              <div className="toggle" role="group" aria-label="View mode">
-                <button className={lmView ? "active" : ""} onClick={() => setLmView(true)}>{t("header.viewLm")}</button>
-                <button className={!lmView ? "active" : ""} onClick={() => setLmView(false)}>{t("header.viewNormal")}</button>
-              </div>
-            )}
-            {data && (
-              <button className="btn btn-secondary" onClick={() => window.print()}>
-                {t("header.print")}
-              </button>
-            )}
-            {me?.isAdmin && <a href="#admin">{t("header.admin")}</a>}
-            <span className="muted" style={{ fontSize: 12 }}>{me?.email}</span>
-            <button className="btn btn-secondary" onClick={signOut}>{t("header.signout")}</button>
-          </div>
-        </header>
-
-        {!data && (
-          <Upload
-            t={t}
-            onParsed={(d) => {
-              setData(d);
-              setResults({ synthesis: null, objectives: null, development: null });
-              setErrors({ synthesis: null, objectives: null, development: null });
-              setTab("overview");
-            }}
-            onPrevParsed={setPrevData}
-            prevData={prevData}
-            onClearPrev={() => setPrevData(null)}
-            history={history}
-            onLoadHistory={loadFromHistory}
-            onDeleteHistory={removeFromHistory}
-          />
-        )}
-
-        {data && (
-          <>
-            <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div>
-                <strong>{data.employee.name}</strong>
-                <span className="muted"> — {data.employee.jobTitle}</span>
-                {viewMode === "lm" && (
-                  <div className="muted" style={{ fontSize: 13 }}>
-                    {data.ratings.peerCount} peer reviews · self {data.ratings.self ?? "—"} · manager {data.ratings.manager ?? "—"} · overall {data.ratings.overall ?? "—"}
-                  </div>
-                )}
-                {prevData && (
-                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                    Comparing against {prevData.employee?.name} · {prevData.dataDate || "—"}
-                  </div>
-                )}
-              </div>
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  setData(null);
-                  setPrevData(null);
-                  setResults({ synthesis: null, objectives: null, development: null });
-                  setErrors({ synthesis: null, objectives: null, development: null });
-                }}
-              >
-                Upload different file
-              </button>
-            </div>
-
-            <div className="tabbar no-print">
-              {TABS.map((tabDef) => (
-                <button key={tabDef.key} className={tab === tabDef.key ? "active" : ""} onClick={() => setTab(tabDef.key)}>
-                  {tabDef.label}
-                </button>
-              ))}
-            </div>
-
-            {tab === "overview" && <Overview data={data} prevData={prevData} view={viewMode} t={t} />}
-            {tab === "analysis" && <Analysis data={data} prevData={prevData} view={viewMode} t={t} />}
-            {tab === "values" && <Values data={data} view={viewMode} t={t} />}
-            {tab === "synthesis" && (
-              <Synthesis
-                result={results.synthesis}
-                loading={loading.synthesis}
-                error={errors.synthesis}
-                onRegenerate={() => runGenerator("synthesis")}
-                view={viewMode}
-                t={t}
-              />
-            )}
-            {tab === "objectives" && (
-              <Objectives
-                result={results.objectives}
-                loading={loading.objectives}
-                error={errors.objectives}
-                onRegenerate={() => runGenerator("objectives")}
-                onUpdate={updateObjective}
-                view={viewMode}
-                t={t}
-              />
-            )}
-            {tab === "development" && (
-              <Development
-                result={results.development}
-                loading={loading.development}
-                error={errors.development}
-                onRegenerate={() => runGenerator("development")}
-                onUpdateRoot={updateDevRoot}
-                onUpdateOpportunity={updateOpportunity}
-                onUpdateBook={updateBook}
-                view={viewMode}
-                t={t}
-              />
-            )}
-            {tab === "compare" && <Compare data={data} prevData={prevData} t={t} />}
-          </>
-        )}
-
-        <div className="muted" style={{ fontSize: 11, marginTop: 32, textAlign: "center" }}>
-          {t("footer.confidential")}
         </div>
-      </div>
+        <div className="header-controls">
+          <select
+            className="pill-select"
+            value={lang}
+            onChange={(e) => changeLang(e.target.value)}
+            title={t("header.language")}
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+          {data && (
+            <div className="pill-group" role="group" aria-label="View mode">
+              <button className={lmView ? "active" : ""} onClick={() => setLmView(true)}>{t("header.viewLm")}</button>
+              <button className={!lmView ? "active" : ""} onClick={() => setLmView(false)}>{t("header.viewNormal")}</button>
+            </div>
+          )}
+          {data && (
+            <button className="pill-btn" onClick={exportPdf}>
+              {t("header.print")}
+            </button>
+          )}
+          {me?.isAdmin && <a className="pill-btn" href="#admin">{t("header.admin")}</a>}
+          <button className="pill-btn" onClick={signOut}>{t("header.signout")}</button>
+        </div>
+      </header>
 
-      <PrintView data={data} prevData={prevData} results={results} view={viewMode} t={t} />
-    </>
+      {!data && (
+        <Upload
+          t={t}
+          onParsed={(d) => {
+            setData(d);
+            setResults({
+              synthesis: null,
+              objectives: null,
+              development: null,
+              overviewStatement: "",
+              savedAt: new Date().toISOString(),
+              lastEditAt: new Date().toISOString(),
+            });
+            setErrors({ synthesis: null, objectives: null, development: null });
+            setTab("overview");
+          }}
+          onPrevParsed={setPrevData}
+          prevData={prevData}
+          onClearPrev={() => setPrevData(null)}
+          history={history}
+          onLoadHistory={loadFromHistory}
+          onDeleteHistory={removeFromHistory}
+        />
+      )}
+
+      {data && (
+        <>
+          <TitleModule
+            data={data}
+            prevData={prevData}
+            view={viewMode}
+            t={t}
+            onUploadDifferent={uploadDifferent}
+          />
+
+          <div className="tabbar">
+            {TABS.map((tabDef) => (
+              <button key={tabDef.key} className={tab === tabDef.key ? "active" : ""} onClick={() => setTab(tabDef.key)}>
+                {tabDef.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "overview" && (
+            <Overview
+              data={data}
+              prevData={prevData}
+              view={viewMode}
+              t={t}
+              overviewStatement={results.overviewStatement}
+              synthesisSummary={results.synthesis?.summary}
+              onUpdateOverview={updateOverviewStatement}
+            />
+          )}
+          {tab === "values" && <Values data={data} view={viewMode} t={t} />}
+          {tab === "synthesis" && (
+            <Synthesis
+              result={results.synthesis}
+              loading={loading.synthesis}
+              error={errors.synthesis}
+              onRegenerate={() => runGenerator("synthesis")}
+              view={viewMode}
+              t={t}
+              openFeedback={data.openFeedback}
+              lang={lang}
+            />
+          )}
+          {tab === "objectives" && (
+            <Objectives
+              result={results.objectives}
+              loading={loading.objectives}
+              error={errors.objectives}
+              onRegenerate={() => runGenerator("objectives")}
+              onUpdate={updateObjective}
+              view={viewMode}
+              t={t}
+            />
+          )}
+          {tab === "development" && (
+            <Development
+              result={results.development}
+              loading={loading.development}
+              error={errors.development}
+              onRegenerate={() => runGenerator("development")}
+              onUpdateRoot={updateDevRoot}
+              onUpdateOpportunity={updateOpportunity}
+              onUpdateBook={updateBook}
+              view={viewMode}
+              t={t}
+            />
+          )}
+          {tab === "compare" && <Compare data={data} prevData={prevData} t={t} />}
+          {tab === "info" && (
+            <AppraisalInfo
+              data={data}
+              savedAt={results.savedAt}
+              lastEditAt={results.lastEditAt}
+              conductedBy={me?.email}
+              t={t}
+            />
+          )}
+        </>
+      )}
+
+      <div className="footer-note">
+        {viewMode === "normal" && data && (
+          <div style={{ marginBottom: 8 }}>{t("overview.scoresHidden")}</div>
+        )}
+        {t("footer.confidential")}
+      </div>
+    </div>
   );
 }

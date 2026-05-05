@@ -1,4 +1,15 @@
-export default function Synthesis({ result, loading, error, onRegenerate, view, t }) {
+import WordCloud from "./WordCloud.jsx";
+
+export default function Synthesis({
+  result,
+  loading,
+  error,
+  onRegenerate,
+  view,
+  t,
+  openFeedback,
+  lang,
+}) {
   if (loading) {
     return (
       <div className="card">
@@ -10,7 +21,7 @@ export default function Synthesis({ result, loading, error, onRegenerate, view, 
     return (
       <div className="card">
         <p className="error">{error}</p>
-        <button className="btn" onClick={onRegenerate}>{t("edit.tryAgain")}</button>
+        <button className="pill-btn" onClick={onRegenerate}>{t("edit.tryAgain")}</button>
       </div>
     );
   }
@@ -19,17 +30,17 @@ export default function Synthesis({ result, loading, error, onRegenerate, view, 
   return (
     <div>
       <div
-        className="card"
-        style={{ background: "#fafafa", borderStyle: "dashed", fontSize: 12, color: "var(--g-600)" }}
+        className="card-flat"
+        style={{ borderStyle: "dashed", fontSize: 12, color: "var(--g-600)" }}
       >
         {t("synthesis.locked")}
       </div>
 
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <p style={{ marginTop: 0 }}>{result.summary}</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+          <p style={{ marginTop: 0, flex: 1, minWidth: 240 }}>{result.summary}</p>
           {view === "lm" && (
-            <button className="btn btn-secondary" onClick={onRegenerate}>{t("synthesis.regenerate")}</button>
+            <button className="pill-btn" onClick={onRegenerate}>{t("synthesis.regenerate")}</button>
           )}
         </div>
         {result.highlightQuote?.text && (
@@ -42,7 +53,7 @@ export default function Synthesis({ result, loading, error, onRegenerate, view, 
 
       {result.strengths?.length > 0 && (
         <div className="card">
-          <div className="section-h">{t("synthesis.strengths")}</div>
+          <div className="section-h" style={{ marginTop: 0 }}>{t("synthesis.strengths")}</div>
           {result.strengths.map((s, i) => (
             <div key={i} className="theme">
               <div className="theme-title">{s.title}</div>
@@ -60,7 +71,7 @@ export default function Synthesis({ result, loading, error, onRegenerate, view, 
 
       {result.development?.length > 0 && (
         <div className="card">
-          <div className="section-h">{t("synthesis.development")}</div>
+          <div className="section-h" style={{ marginTop: 0 }}>{t("synthesis.development")}</div>
           {result.development.map((d, i) => (
             <div key={i} className="theme" style={{ borderLeftColor: "var(--orange)" }}>
               <div className="theme-title">{d.title}</div>
@@ -74,10 +85,12 @@ export default function Synthesis({ result, loading, error, onRegenerate, view, 
 
       {result.agreedPriority && (
         <div className="card">
-          <div className="section-h">{t("synthesis.priority")}</div>
+          <div className="section-h" style={{ marginTop: 0 }}>{t("synthesis.priority")}</div>
           <p style={{ margin: 0 }}>{result.agreedPriority}</p>
         </div>
       )}
+
+      <WordCloud openFeedback={openFeedback} lang={lang} t={t} />
     </div>
   );
 }

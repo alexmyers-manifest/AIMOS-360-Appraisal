@@ -28,7 +28,7 @@ export default function Values({ data, view, t }) {
             <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--g-200)" />
               <XAxis dataKey="label" tick={{ fill: "var(--g-800)", fontSize: 12 }} />
-              <YAxis domain={[0, 4]} tick={{ fill: "var(--g-500)", fontSize: 11 }} />
+              <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{ fill: "var(--g-500)", fontSize: 11 }} />
               <Tooltip />
               <Legend />
               <Bar dataKey="Self" fill="var(--g-800)" />

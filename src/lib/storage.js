@@ -66,22 +66,25 @@ export function loadHistory(email) {
 export function saveToHistory(email, entry) {
   const list = loadHistory(email);
   const hk = historyKey(entry.employeeName, entry.dataDate);
+  const existing = list.find((h) => h.hk === hk);
   const record = {
     hk,
     employeeName: entry.employeeName,
     jobTitle: entry.jobTitle,
     dataDate: entry.dataDate,
-    savedAt: new Date().toISOString(),
+    savedAt: existing?.savedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     data: entry.data,
     prevData: entry.prevData || null,
     synthesis: entry.synthesis,
     objectives: entry.objectives,
     development: entry.development,
+    overviewStatement: entry.overviewStatement || "",
   };
   const idx = list.findIndex((h) => h.hk === hk);
   if (idx >= 0) list[idx] = record;
   else list.unshift(record);
-  list.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  list.sort((a, b) => new Date(b.updatedAt || b.savedAt) - new Date(a.updatedAt || a.savedAt));
   const trimmed = list.slice(0, MAX_HISTORY);
   write(email, "history", trimmed);
   return trimmed;

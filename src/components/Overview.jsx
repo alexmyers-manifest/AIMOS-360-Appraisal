@@ -1,114 +1,146 @@
-function Stat({ label, value, accent, delta }) {
-  return (
-    <div style={{ minWidth: 110 }}>
-      <div className="section-h" style={{ margin: "0 0 4px" }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 600, color: accent || "var(--g-900)" }}>
-        {value ?? "—"}
-      </div>
-      {delta != null && (
-        <div
-          style={{
-            fontSize: 11,
-            marginTop: 2,
-            color: delta > 0 ? "var(--green)" : delta < 0 ? "var(--orange)" : "var(--g-500)",
-          }}
-        >
-          {delta > 0 ? "▲" : delta < 0 ? "▼" : "±"} {Math.abs(delta).toFixed(1)}
-        </div>
-      )}
-    </div>
-  );
-}
+import {
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from "recharts";
+import EditableText from "./EditableText.jsx";
 
-function delta(prev, cur) {
-  if (prev == null || cur == null) return null;
-  const d = Number(cur) - Number(prev);
-  return Math.abs(d) < 0.05 ? 0 : d;
-}
+export default function Overview({
+  data,
+  prevData,
+  view,
+  t,
+  overviewStatement,
+  onUpdateOverview,
+  synthesisSummary,
+}) {
+  const rows = data.compSummary || [];
 
-export default function Overview({ data, prevData, view, t }) {
-  const { employee, ratings, dataDate, openFeedback } = data;
-  const prevR = prevData?.ratings || {};
+  const radarData = rows.map((r) => {
+    const item = {
+      label: r.short,
+      Self: r.selfScore || 0,
+      "Peer avg": r.peerAvg || 0,
+      Manager: r.managerScore || 0,
+    };
+    if (prevData) {
+      const p = (prevData.compSummary || []).find((x) => x.key === r.key);
+      if (p) item.Previous = p.peerAvg || 0;
+    }
+    return item;
+  });
 
-  const counts = {
-    strengths: openFeedback?.strengths?.length || 0,
-    challenges: openFeedback?.challenges?.length || 0,
-    advice: openFeedback?.advice?.length || 0,
-    additional: openFeedback?.additional?.length || 0,
-  };
+  const showPrevSeries = prevData && radarData.some((d) => "Previous" in d);
+
+  const editableValue = overviewStatement || synthesisSummary || "";
+  const readOnly = view !== "lm";
 
   return (
     <div>
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div className="section-h" style={{ marginTop: 0 }}>{t("overview.reviewee")}</div>
-            <div style={{ fontSize: 22, fontWeight: 600 }}>{employee.name}</div>
-            <div style={{ color: "var(--g-600)" }}>{employee.jobTitle}</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-              {employee.tenure ? <>{t("overview.tenure")}: <strong>{employee.tenure}</strong> · </> : null}
-              {employee.reportsTo ? <>{t("overview.reportsTo")}: <strong>{employee.reportsTo}</strong></> : null}
-            </div>
-            {dataDate && (
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                {t("overview.dataDate")} {dataDate}
-              </div>
-            )}
-          </div>
+        <div className="section-h" style={{ marginTop: 0 }}>{t("overview.statement")}</div>
+        {!readOnly && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 0, marginBottom: 8 }}>
+            {t("overview.statementHelp")}
+          </p>
+        )}
+        <div style={{ fontSize: 15, lineHeight: 1.6 }}>
+          <EditableText
+            value={editableValue}
+            multiline
+            rows={3}
+            readOnly={readOnly}
+            onSave={onUpdateOverview}
+            placeholder={readOnly ? "—" : t("overview.statementHelp")}
+          />
         </div>
       </div>
 
-      {view === "lm" ? (
-        <div className="card">
-          <div className="section-h" style={{ marginTop: 0 }}>{t("overview.headline")}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 32, marginTop: 8 }}>
-            <Stat
-              label={t("overview.overall")}
-              value={ratings.overall}
-              accent="var(--blue)"
-              delta={prevData ? delta(prevR.overall, ratings.overall) : null}
-            />
-            <Stat
-              label={t("overview.peerAvg")}
-              value={ratings.peerAvg}
-              accent="var(--green)"
-              delta={prevData ? delta(prevR.peerAvg, ratings.peerAvg) : null}
-            />
-            <Stat
-              label={t("overview.self")}
-              value={ratings.self}
-              accent="var(--g-800)"
-              delta={prevData ? delta(prevR.self, ratings.self) : null}
-            />
-            <Stat
-              label={t("overview.manager")}
-              value={ratings.manager}
-              accent="var(--orange)"
-              delta={prevData ? delta(prevR.manager, ratings.manager) : null}
-            />
-            <Stat label={t("overview.peerCount")} value={ratings.peerCount} />
-          </div>
-          {prevData && (
-            <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>
-              {t("overview.priorDelta")} ({prevData.dataDate || "—"})
-            </p>
-          )}
+      <div className="card">
+        <div className="section-h" style={{ marginTop: 0 }}>{t("analysis.title")}</div>
+        <div style={{ width: "100%", height: 340 }}>
+          <ResponsiveContainer>
+            <RadarChart data={radarData} outerRadius="75%">
+              <PolarGrid stroke="var(--g-300)" />
+              <PolarAngleAxis dataKey="label" tick={{ fill: "var(--g-800)", fontSize: 12 }} />
+              <PolarRadiusAxis domain={[0, 10]} tick={{ fill: "var(--g-500)", fontSize: 11 }} />
+              <Radar name="Self" dataKey="Self" stroke="var(--g-800)" fill="var(--g-800)" fillOpacity={0.12} />
+              <Radar name="Peer avg" dataKey="Peer avg" stroke="var(--green)" fill="var(--green)" fillOpacity={0.18} />
+              <Radar name="Manager" dataKey="Manager" stroke="var(--orange)" fill="var(--orange)" fillOpacity={0.15} />
+              {showPrevSeries && (
+                <Radar
+                  name="Previous"
+                  dataKey="Previous"
+                  stroke="var(--g-400)"
+                  fill="none"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                />
+              )}
+              <Tooltip />
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
         </div>
-      ) : (
+      </div>
+
+      {view === "lm" && (
         <div className="card">
-          <p className="muted" style={{ margin: 0 }}>{t("overview.scoresHidden")}</p>
+          <div className="section-h" style={{ marginTop: 0 }}>{t("analysis.breakdown")}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>{t("analysis.competency")}</th>
+                <th>{t("overview.self")}</th>
+                <th>{t("overview.peerAvg")}</th>
+                <th>{t("overview.manager")}</th>
+                <th>{t("analysis.gaps")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.key}>
+                  <td><strong>{r.label}</strong></td>
+                  <td>{r.selfScore ?? "—"}</td>
+                  <td>{r.peerAvg ?? "—"}</td>
+                  <td>{r.managerScore ?? "—"}</td>
+                  <td style={{ color: r.gaps?.length ? "var(--orange)" : "var(--g-400)" }}>
+                    {r.gaps?.length ? r.gaps.join(", ") : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <div className="card">
-        <div className="section-h" style={{ marginTop: 0 }}>{t("overview.feedback")}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 8 }}>
-          <Stat label={t("overview.strengths")} value={counts.strengths} />
-          <Stat label={t("overview.challenges")} value={counts.challenges} />
-          <Stat label={t("overview.advice")} value={counts.advice} />
-          <Stat label={t("overview.additional")} value={counts.additional} />
-        </div>
-      </div>
+      {view === "lm" &&
+        rows.map((r) =>
+          r.reviews?.some((rev) => rev.comment) ? (
+            <div key={r.key} className="card">
+              <div className="section-h" style={{ marginTop: 0 }}>
+                {r.label} — {t("analysis.comments")}
+              </div>
+              {r.reviews
+                .filter((rev) => rev.comment)
+                .map((rev, i) => (
+                  <blockquote key={i} className="quote" style={{ marginBottom: 8 }}>
+                    "{rev.comment}"
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      — {rev.reviewer}
+                      {rev.relation ? ` · ${rev.relation}` : ""}
+                      {rev.score != null ? ` · scored ${rev.score}` : ""}
+                    </div>
+                  </blockquote>
+                ))}
+            </div>
+          ) : null
+        )}
     </div>
   );
 }
