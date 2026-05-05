@@ -380,7 +380,7 @@ h4 {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .title-module .ratings .stat {
