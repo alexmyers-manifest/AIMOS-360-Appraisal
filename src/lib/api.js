@@ -23,10 +23,10 @@ async function request(path, opts = {}) {
 
 export const api = {
   me: () => request("/api/me"),
-  generate: (type, data) =>
+  generate: (type, data, lang) =>
     request("/api/generate", {
       method: "POST",
-      body: JSON.stringify({ type, data }),
+      body: JSON.stringify({ type, data, lang }),
     }),
   listAllowlist: () => request("/api/allowlist"),
   addAllowlist: (email) =>

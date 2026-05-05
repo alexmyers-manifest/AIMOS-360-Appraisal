@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function Values({ data }) {
+export default function Values({ data, view, t }) {
   const rows = data.valSummary || [];
 
   const chartData = rows.map((r) => ({
@@ -22,7 +22,7 @@ export default function Values({ data }) {
   return (
     <div>
       <div className="card">
-        <div className="section-h" style={{ marginTop: 0 }}>Values (1–4)</div>
+        <div className="section-h" style={{ marginTop: 0 }}>{t("values.title")}</div>
         <div style={{ width: "100%", height: 320 }}>
           <ResponsiveContainer>
             <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -39,27 +39,28 @@ export default function Values({ data }) {
         </div>
       </div>
 
-      {rows.map((r) => (
-        <div key={r.key} className="card">
-          <div className="section-h" style={{ marginTop: 0 }}>{r.short}</div>
-          <p className="muted" style={{ fontStyle: "italic", marginTop: 0 }}>"{r.full}"</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-            <div>
-              <div className="section-h">Self</div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>{r.selfScore ?? "—"}</div>
-              {r.selfLabel && <div className="muted" style={{ fontSize: 12 }}>{r.selfLabel}</div>}
-            </div>
-            <div>
-              <div className="section-h">Peer avg</div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "var(--green)" }}>{r.peerAvg ?? "—"}</div>
-            </div>
-            <div>
-              <div className="section-h">Manager</div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "var(--orange)" }}>{r.managerScore ?? "—"}</div>
+      {view === "lm" &&
+        rows.map((r) => (
+          <div key={r.key} className="card">
+            <div className="section-h" style={{ marginTop: 0 }}>{r.short}</div>
+            <p className="muted" style={{ fontStyle: "italic", marginTop: 0 }}>"{r.full}"</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+              <div>
+                <div className="section-h">{t("overview.self")}</div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>{r.selfScore ?? "—"}</div>
+                {r.selfLabel && <div className="muted" style={{ fontSize: 12 }}>{r.selfLabel}</div>}
+              </div>
+              <div>
+                <div className="section-h">{t("overview.peerAvg")}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "var(--green)" }}>{r.peerAvg ?? "—"}</div>
+              </div>
+              <div>
+                <div className="section-h">{t("overview.manager")}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "var(--orange)" }}>{r.managerScore ?? "—"}</div>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }

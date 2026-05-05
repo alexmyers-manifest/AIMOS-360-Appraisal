@@ -1,8 +1,8 @@
-export default function Synthesis({ result, loading, error, onRegenerate }) {
+export default function Synthesis({ result, loading, error, onRegenerate, view, t }) {
   if (loading) {
     return (
       <div className="card">
-        <span className="spinner" />Generating synthesis…
+        <span className="spinner" />{t("synthesis.generating")}
       </div>
     );
   }
@@ -10,7 +10,7 @@ export default function Synthesis({ result, loading, error, onRegenerate }) {
     return (
       <div className="card">
         <p className="error">{error}</p>
-        <button className="btn" onClick={onRegenerate}>Try again</button>
+        <button className="btn" onClick={onRegenerate}>{t("edit.tryAgain")}</button>
       </div>
     );
   }
@@ -18,10 +18,19 @@ export default function Synthesis({ result, loading, error, onRegenerate }) {
 
   return (
     <div>
+      <div
+        className="card"
+        style={{ background: "#fafafa", borderStyle: "dashed", fontSize: 12, color: "var(--g-600)" }}
+      >
+        {t("synthesis.locked")}
+      </div>
+
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <p style={{ marginTop: 0 }}>{result.summary}</p>
-          <button className="btn btn-secondary" onClick={onRegenerate}>Regenerate</button>
+          {view === "lm" && (
+            <button className="btn btn-secondary" onClick={onRegenerate}>{t("synthesis.regenerate")}</button>
+          )}
         </div>
         {result.highlightQuote?.text && (
           <blockquote className="quote">
@@ -33,7 +42,7 @@ export default function Synthesis({ result, loading, error, onRegenerate }) {
 
       {result.strengths?.length > 0 && (
         <div className="card">
-          <div className="section-h">Strengths</div>
+          <div className="section-h">{t("synthesis.strengths")}</div>
           {result.strengths.map((s, i) => (
             <div key={i} className="theme">
               <div className="theme-title">{s.title}</div>
@@ -51,7 +60,7 @@ export default function Synthesis({ result, loading, error, onRegenerate }) {
 
       {result.development?.length > 0 && (
         <div className="card">
-          <div className="section-h">Development themes</div>
+          <div className="section-h">{t("synthesis.development")}</div>
           {result.development.map((d, i) => (
             <div key={i} className="theme" style={{ borderLeftColor: "var(--orange)" }}>
               <div className="theme-title">{d.title}</div>
@@ -65,7 +74,7 @@ export default function Synthesis({ result, loading, error, onRegenerate }) {
 
       {result.agreedPriority && (
         <div className="card">
-          <div className="section-h">Agreed priority</div>
+          <div className="section-h">{t("synthesis.priority")}</div>
           <p style={{ margin: 0 }}>{result.agreedPriority}</p>
         </div>
       )}

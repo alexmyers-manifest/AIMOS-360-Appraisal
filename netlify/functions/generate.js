@@ -24,7 +24,7 @@ export default async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { type, data } = body;
+  const { type, data, lang } = body;
   if (!["synthesis", "objectives", "development"].includes(type)) {
     return jsonResponse(400, { error: { message: "Invalid type." } });
   }
@@ -32,7 +32,7 @@ export default async (req) => {
     return jsonResponse(400, { error: { message: "Missing parsed appraisal data." } });
   }
 
-  const userPrompt = buildUserPrompt(type, data);
+  const userPrompt = buildUserPrompt(type, data, lang || "en-GB");
 
   const client = new Anthropic({ apiKey });
 
