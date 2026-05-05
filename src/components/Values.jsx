@@ -23,6 +23,16 @@ export default function Values({ data, view, t }) {
     <div>
       <div className="card">
         <div className="section-h" style={{ marginTop: 0 }}>{t("values.title")}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 16 }}>
+          {rows.map((r) => (
+            <div key={r.key} style={{ borderLeft: "3px solid var(--blue)", paddingLeft: 10 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{r.short}</div>
+              <div className="muted" style={{ fontSize: 12, fontStyle: "italic", marginTop: 2 }}>
+                "{r.full}"
+              </div>
+            </div>
+          ))}
+        </div>
         <div style={{ width: "100%", height: 320 }}>
           <ResponsiveContainer>
             <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>

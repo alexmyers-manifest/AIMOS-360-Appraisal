@@ -5,9 +5,10 @@
 // require human verification for tone and accuracy.
 
 export const LANGUAGES = [
-  { code: "en-GB", label: "English (UK)" },
-  { code: "en-US", label: "English (US)" },
-  { code: "sv", label: "Svenska" },
+  { code: "en-GB", label: "🇬🇧 UK English" },
+  { code: "en-US", label: "🇺🇸 US English" },
+  { code: "en-AU", label: "🇦🇺 AU English" },
+  { code: "sv", label: "🇸🇪 Svenska" },
 ];
 
 const COMMON = {
@@ -68,7 +69,7 @@ const STRINGS = {
     "synthesis.development": "Development themes",
     "synthesis.priority": "Agreed priority",
     "synthesis.regenerate": "Regenerate",
-    "synthesis.locked": "360 Feedback summary is read-only — it's the AI's read of the 360° feedback. Edits live on the Overview, Objectives and Development tabs.",
+    "synthesis.locked": "360 Feedback summary is read-only — it's AIMOS' read of the 360° feedback. Edits live on the Overview, Objectives and Development tabs.",
     "synthesis.generating": "Generating 360 feedback summary…",
     "wordcloud.title": "Most common words across feedback",
     "wordcloud.legendEn": "Manifest green = positive · Manifest orange = critical · grey = neutral.",
@@ -158,7 +159,7 @@ const STRINGS = {
     "synthesis.development": "Development themes",
     "synthesis.priority": "Agreed priority",
     "synthesis.regenerate": "Regenerate",
-    "synthesis.locked": "360 Feedback summary is read-only — it's the AI's read of the 360° feedback. Edits live on the Overview, Objectives and Development tabs.",
+    "synthesis.locked": "360 Feedback summary is read-only — it's AIMOS' read of the 360° feedback. Edits live on the Overview, Objectives and Development tabs.",
     "synthesis.generating": "Generating 360 feedback summary…",
     "wordcloud.title": "Most common words across feedback",
     "wordcloud.legendEn": "Manifest green = positive · Manifest orange = critical · gray = neutral.",
@@ -254,7 +255,7 @@ const STRINGS = {
     "synthesis.development": "Utvecklingsområden",
     "synthesis.priority": "Överenskommen prioritet",
     "synthesis.regenerate": "Generera om",
-    "synthesis.locked": "360-återkopplingens sammanfattning är skrivskyddad — det är AI:ns tolkning. Ändringar görs på Översikt, Mål och Utveckling.",
+    "synthesis.locked": "360-återkopplingens sammanfattning är skrivskyddad — det är AIMOS tolkning. Ändringar görs på Översikt, Mål och Utveckling.",
     "synthesis.generating": "Genererar 360-sammanfattning…",
     "wordcloud.title": "Vanligast förekommande ord i återkopplingen",
     "wordcloud.legendEn": "Manifest grön = positiv · Manifest orange = kritisk · grå = neutral.",
@@ -325,6 +326,9 @@ export function aiLanguageDirective(lang) {
   }
   if (lang === "en-US") {
     return "Respond in American English. Use US spelling (e.g. organize, behavior, prioritize) and US idioms.";
+  }
+  if (lang === "en-AU") {
+    return "Respond in Australian English. Use UK spelling conventions (organise, behaviour, prioritise) but feel free to use natural Australian phrasing where it reads well in a formal HR context.";
   }
   return "Respond in British English. Use UK spelling (e.g. organise, behaviour, prioritise) and UK idioms.";
 }

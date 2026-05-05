@@ -9,6 +9,7 @@ export default function Synthesis({
   t,
   openFeedback,
   lang,
+  employeeName,
 }) {
   if (loading) {
     return (
@@ -90,7 +91,7 @@ export default function Synthesis({
         </div>
       )}
 
-      <WordCloud openFeedback={openFeedback} lang={lang} t={t} />
+      <WordCloud openFeedback={openFeedback} lang={lang} t={t} employeeName={employeeName} />
     </div>
   );
 }

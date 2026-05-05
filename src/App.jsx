@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./lib/api.js";
 import { getStoredToken, setStoredToken, tokenIsFresh, disableAutoSelect } from "./lib/auth.js";
 import { LANGUAGES, getLang, setLang as persistLang, makeT } from "./lib/i18n.js";
@@ -40,6 +40,7 @@ export default function App() {
     objectives: null,
     development: null,
     overviewStatement: "",
+    displayName: "",
     savedAt: null,
     lastEditAt: null,
   });
@@ -53,6 +54,10 @@ export default function App() {
 
   const t = useMemo(() => makeT(lang), [lang]);
   const viewMode = lmView ? "lm" : "normal";
+
+  // Sequence guard so a stale in-flight generation can't overwrite fresh state
+  // if the user uploads a different file mid-generation.
+  const generationSeq = useRef({ synthesis: 0, objectives: 0, development: 0 });
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash === "#admin" ? "admin" : "app");
@@ -110,6 +115,7 @@ export default function App() {
       objectives: results.objectives,
       development: results.development,
       overviewStatement: results.overviewStatement,
+      displayName: results.displayName,
     });
     setHistory(next);
   }, [
@@ -121,6 +127,7 @@ export default function App() {
     results.objectives,
     results.development,
     results.overviewStatement,
+    results.displayName,
   ]);
 
   function onSignedIn(token) {
@@ -150,6 +157,7 @@ export default function App() {
       objectives: null,
       development: null,
       overviewStatement: "",
+      displayName: "",
       savedAt: null,
       lastEditAt: null,
     });
@@ -161,21 +169,41 @@ export default function App() {
 
   async function runGenerator(type) {
     if (!data) return;
+    const seq = ++generationSeq.current[type];
     setLoading((l) => ({ ...l, [type]: true }));
     setErrors((e) => ({ ...e, [type]: null }));
-    try {
-      const out = await api.generate(type, data, lang);
-      setResults((r) => ({
-        ...r,
-        [type]: out,
-        savedAt: r.savedAt || new Date().toISOString(),
-        lastEditAt: new Date().toISOString(),
-      }));
-    } catch (e) {
-      setErrors((er) => ({ ...er, [type]: e.message }));
-    } finally {
-      setLoading((l) => ({ ...l, [type]: false }));
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      // If a newer call started, drop this one silently.
+      if (seq !== generationSeq.current[type]) return;
+      try {
+        const out = await api.generate(type, data, lang);
+        if (seq !== generationSeq.current[type]) return; // stale response
+        setResults((r) => ({
+          ...r,
+          [type]: out,
+          savedAt: r.savedAt || new Date().toISOString(),
+          lastEditAt: new Date().toISOString(),
+        }));
+        setLoading((l) => ({ ...l, [type]: false }));
+        return;
+      } catch (e) {
+        lastError = e;
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, attempt * 1500));
+        }
+      }
     }
+
+    if (seq !== generationSeq.current[type]) return;
+    setErrors((er) => ({
+      ...er,
+      [type]:
+        (lastError?.message || "Generation failed") +
+        " — retried 3 times. Click Try again or check the function logs.",
+    }));
+    setLoading((l) => ({ ...l, [type]: false }));
   }
 
   useEffect(() => {
@@ -209,6 +237,7 @@ export default function App() {
       objectives: h.objectives || null,
       development: h.development || null,
       overviewStatement: h.overviewStatement || "",
+      displayName: h.displayName || "",
       savedAt: h.savedAt || null,
       lastEditAt: h.savedAt || null,
     });
@@ -224,6 +253,9 @@ export default function App() {
 
   const updateOverviewStatement = (v) =>
     setResults((r) => ({ ...r, overviewStatement: v, lastEditAt: new Date().toISOString() }));
+
+  const updateDisplayName = (v) =>
+    setResults((r) => ({ ...r, displayName: v, lastEditAt: new Date().toISOString() }));
 
   const updateObjective = (i, patch) =>
     setResults((r) => {
@@ -267,7 +299,8 @@ export default function App() {
 
   function exportPdf() {
     if (!data) return;
-    const words = buildWordCloud(data.openFeedback, lang, 40);
+    const displayName = results.displayName || data.employee?.name || "";
+    const words = buildWordCloud(data.openFeedback, lang, 40, displayName);
     downloadExport({
       data,
       prevData,
@@ -277,6 +310,7 @@ export default function App() {
       lang,
       t,
       conductedBy: me?.email,
+      displayName,
     });
   }
 
@@ -341,6 +375,7 @@ export default function App() {
       objectives: null,
       development: null,
       overviewStatement: "",
+      displayName: "",
       savedAt: null,
       lastEditAt: null,
     });
@@ -417,6 +452,8 @@ export default function App() {
             view={viewMode}
             t={t}
             onUploadDifferent={uploadDifferent}
+            displayName={results.displayName}
+            onUpdateDisplayName={updateDisplayName}
           />
 
           <div className="tabbar">
@@ -449,6 +486,7 @@ export default function App() {
               t={t}
               openFeedback={data.openFeedback}
               lang={lang}
+              employeeName={results.displayName || data.employee?.name}
             />
           )}
           {tab === "objectives" && (

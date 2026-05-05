@@ -8,6 +8,9 @@ function languageInstruction(lang) {
   if (lang === "en-US") {
     return "Respond in American English. Use US spelling (organize, behavior, prioritize, anonymize) and US idioms.";
   }
+  if (lang === "en-AU") {
+    return "Respond in Australian English. Use UK spelling conventions (organise, behaviour, prioritise, anonymise) but feel free to use natural Australian phrasing where it reads well in a formal HR context.";
+  }
   return "Respond in British English. Use UK spelling (organise, behaviour, prioritise, anonymise) and UK idioms.";
 }
 

@@ -1,11 +1,14 @@
 import { useMemo } from "react";
 import { buildWordCloud } from "../lib/wordcloud.js";
 
-export default function WordCloud({ openFeedback, lang, t }) {
-  const words = useMemo(() => buildWordCloud(openFeedback, lang, 40), [openFeedback, lang]);
+export default function WordCloud({ openFeedback, lang, t, employeeName }) {
+  const words = useMemo(
+    () => buildWordCloud(openFeedback, lang, 40, employeeName),
+    [openFeedback, lang, employeeName]
+  );
   if (!words.length) return null;
 
-  const isEnglish = lang === "en-GB" || lang === "en-US";
+  const isEnglish = lang === "en-GB" || lang === "en-US" || lang === "en-AU";
 
   return (
     <div className="card">

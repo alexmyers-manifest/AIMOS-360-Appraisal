@@ -62,10 +62,10 @@ th { color: #767676; font-weight: 500; }
 }
 
 function radarSVG(rows, prevRows) {
-  const size = 380;
+  const size = 460;
   const cx = size / 2;
   const cy = size / 2 + 10;
-  const r = size / 2 - 60;
+  const r = size / 2 - 110;
   const n = rows.length;
   if (!n) return "";
   const pt = (i, value, max) => {
@@ -91,13 +91,29 @@ function radarSVG(rows, prevRows) {
     .map((f) => `<path d="${ringPath(f)}" fill="none" stroke="#ddd" stroke-width="1" />`)
     .join("");
 
+  const splitLabel = (label) => {
+    if (label.length <= 14) return [label];
+    if (label.includes(" & ")) {
+      const [a, b] = label.split(" & ");
+      return [a + " &", b];
+    }
+    const words = label.split(" ");
+    if (words.length === 1) return [label];
+    const half = Math.ceil(words.length / 2);
+    return [words.slice(0, half).join(" "), words.slice(half).join(" ")];
+  };
+
   const labels = rows
     .map((row, i) => {
       const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-      const lx = cx + Math.cos(angle) * (r + 24);
-      const ly = cy + Math.sin(angle) * (r + 16);
+      const lx = cx + Math.cos(angle) * (r + 30);
+      const ly = cy + Math.sin(angle) * (r + 20);
       const anchor = Math.abs(Math.cos(angle)) < 0.3 ? "middle" : Math.cos(angle) > 0 ? "start" : "end";
-      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="#434343">${esc(row.label)}</text>`;
+      const lines = splitLabel(String(row.label));
+      const tspans = lines
+        .map((line, idx) => `<tspan x="${lx.toFixed(1)}" dy="${idx === 0 ? 0 : 12}">${esc(line)}</tspan>`)
+        .join("");
+      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" font-size="10" fill="#434343">${tspans}</text>`;
     })
     .join("");
 
@@ -179,7 +195,7 @@ function renderOverview(data, prevData, results, t) {
     "";
 
   const compRows = (data.compSummary || []).map((c) => ({
-    label: c.short,
+    label: c.label,
     Self: c.selfScore || 0,
     Peers: c.peerAvg || 0,
     Manager: c.managerScore || 0,
@@ -208,7 +224,7 @@ function renderOverview(data, prevData, results, t) {
   </div>
   <div class="card">
     <h3>${esc(t("analysis.title"))}</h3>
-    ${radarSVG(compRows.map((c, i) => ({ ...c, label: data.compSummary[i]?.short })), prevData ? compRows : null)}
+    ${radarSVG(compRows, prevData ? compRows : null)}
   </div>
   <div class="card">
     <h3>${esc(t("analysis.breakdown"))}</h3>
@@ -435,10 +451,11 @@ function renderInfo(data, results, conductedBy, t) {
 </section>`;
 }
 
-export function buildExportHTML({ data, prevData, results, words, view, lang, t, conductedBy }) {
+export function buildExportHTML({ data, prevData, results, words, view, lang, t, conductedBy, displayName }) {
   if (!data) return "";
   const e = data.employee || {};
-  const title = `AIMOS 360 — ${e.name || "Appraisal"}`;
+  const name = displayName || e.name || "Appraisal";
+  const title = `AIMOS 360 — ${name}`;
 
   return `<!doctype html>
 <html lang="${esc(lang || "en-GB")}">
@@ -450,7 +467,7 @@ export function buildExportHTML({ data, prevData, results, words, view, lang, t,
 </head>
 <body>
 <div class="cover">
-  <h1>${esc(e.name || "—")}</h1>
+  <h1>${esc(name)}</h1>
   <div class="muted">${esc(e.jobTitle || "")}</div>
   <div class="row" style="margin-top:8px;font-size:9pt;color:#666">
     ${e.tenure ? `<span><strong>${esc(t("title.tenure"))}:</strong> ${esc(e.tenure)}</span>` : ""}
@@ -475,9 +492,9 @@ export function downloadExport(opts) {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const name = (opts.data?.employee?.name || "appraisee").replace(/\s+/g, "_");
+  const safeName = (opts.displayName || opts.data?.employee?.name || "appraisee").replace(/\s+/g, "_");
   a.href = url;
-  a.download = `AIMOS_360_${name}.html`;
+  a.download = `AIMOS_360_${safeName}.html`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

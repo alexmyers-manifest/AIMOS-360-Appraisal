@@ -14,7 +14,7 @@ export const VALUES_DEFS = [
   { key: "remarkable", short: "Be remarkable", full: "Kick the shit out of the opportunity to be remarkable", keywords: ["kick the shit out"] },
   { key: "build_it", short: "Build it", full: "If you can't find what you're looking for, build it", keywords: ["if you can't find what you're looking for"] },
   { key: "impossible", short: "Healthy disregard", full: "Maintain a healthy disregard for the impossible", keywords: ["healthy disregard for the impossible"] },
-  { key: "be_nice", short: "Work hard + be nice", full: "Work Hard + Be Nice to People", keywords: ["work hard & be nice"] },
+  { key: "be_nice", short: "Work Hard + Be Nice", full: "Work hard and be nice to people", keywords: ["work hard & be nice"] },
 ];
 
 export const OPEN_FIELDS = [

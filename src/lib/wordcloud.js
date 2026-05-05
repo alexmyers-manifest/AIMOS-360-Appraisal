@@ -49,22 +49,35 @@ function classify(word) {
   return "neu";
 }
 
-function tokenize(text) {
+function tokenize(text, excludeSet) {
   return String(text || "")
     .toLowerCase()
     .replace(/[‘’']/g, "")
     .replace(/[^a-zåäö]+/gi, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+    .filter((w) => w.length >= 4 && !STOPWORDS.has(w) && !excludeSet.has(w));
 }
 
-export function buildWordCloud(openFeedback, lang = "en-GB", limit = 40) {
+function buildExcludeSet(employeeName) {
+  const set = new Set();
+  if (!employeeName) return set;
+  const cleaned = String(employeeName)
+    .toLowerCase()
+    .replace(/[^a-zåäö\s]+/gi, " ")
+    .split(/\s+/)
+    .filter((p) => p.length >= 2);
+  for (const part of cleaned) set.add(part);
+  return set;
+}
+
+export function buildWordCloud(openFeedback, lang = "en-GB", limit = 40, employeeName = "") {
   if (!openFeedback) return [];
+  const exclude = buildExcludeSet(employeeName);
   const counts = new Map();
   for (const list of Object.values(openFeedback)) {
     if (!Array.isArray(list)) continue;
     for (const item of list) {
-      for (const tok of tokenize(item.text)) {
+      for (const tok of tokenize(item.text, exclude)) {
         counts.set(tok, (counts.get(tok) || 0) + 1);
       }
     }
@@ -77,7 +90,7 @@ export function buildWordCloud(openFeedback, lang = "en-GB", limit = 40) {
 
   const max = sorted[0]?.[1] || 1;
   const min = sorted[sorted.length - 1]?.[1] || 1;
-  const isEnglish = lang === "en-GB" || lang === "en-US";
+  const isEnglish = lang === "en-GB" || lang === "en-US" || lang === "en-AU";
 
   return sorted.map(([word, count]) => {
     const t = (count - min) / Math.max(1, max - min);

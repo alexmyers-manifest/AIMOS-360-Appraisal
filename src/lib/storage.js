@@ -80,6 +80,7 @@ export function saveToHistory(email, entry) {
     objectives: entry.objectives,
     development: entry.development,
     overviewStatement: entry.overviewStatement || "",
+    displayName: entry.displayName || "",
   };
   const idx = list.findIndex((h) => h.hk === hk);
   if (idx >= 0) list[idx] = record;
