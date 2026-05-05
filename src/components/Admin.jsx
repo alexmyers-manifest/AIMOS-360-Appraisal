@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import Roundel from "./Roundel.jsx";
 
 export default function Admin({ me, onSignOut }) {
   const [list, setList] = useState(null);
@@ -52,7 +53,10 @@ export default function Admin({ me, onSignOut }) {
   return (
     <div className="shell">
       <header className="header">
-        <h1>AIMOS 360º — Admin</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Roundel size={36} />
+          <h1>AIMOS 360º — Admin</h1>
+        </div>
         <div className="who">
           <a href="#" style={{ marginRight: 12 }}>Back to app</a>
           {me?.email} <button className="btn btn-secondary" style={{ marginLeft: 8 }} onClick={onSignOut}>Sign out</button>

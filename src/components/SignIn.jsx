@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { renderSignInButton, GOOGLE_CLIENT_ID } from "../lib/auth.js";
+import Roundel from "./Roundel.jsx";
 
 export default function SignIn({ onSignedIn, error }) {
   const ref = useRef(null);
@@ -13,6 +14,9 @@ export default function SignIn({ onSignedIn, error }) {
   return (
     <div className="signin">
       <div className="panel">
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <Roundel size={56} />
+        </div>
         <h1 style={{ fontSize: 20, marginBottom: 8 }}>AIMOS 360º Review</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
           Sign in with your Manifest Google account to continue.

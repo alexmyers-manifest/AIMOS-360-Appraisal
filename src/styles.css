@@ -68,6 +68,7 @@ a {
   margin: 0;
   font-size: 22px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .header .who {
@@ -94,8 +95,12 @@ a {
 
 .tabbar button.active {
   color: var(--g-900);
-  border-bottom-color: var(--blue);
+  border-bottom-color: var(--orange);
   font-weight: 500;
+}
+
+.tabbar button:hover:not(.active) {
+  color: var(--g-900);
 }
 
 .card {

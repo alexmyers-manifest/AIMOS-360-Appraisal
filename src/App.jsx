@@ -3,12 +3,19 @@ import { api } from "./lib/api.js";
 import { getStoredToken, setStoredToken, tokenIsFresh, disableAutoSelect } from "./lib/auth.js";
 import SignIn from "./components/SignIn.jsx";
 import Upload from "./components/Upload.jsx";
+import Overview from "./components/Overview.jsx";
+import Analysis from "./components/Analysis.jsx";
+import Values from "./components/Values.jsx";
 import Synthesis from "./components/Synthesis.jsx";
 import Objectives from "./components/Objectives.jsx";
 import Development from "./components/Development.jsx";
 import Admin from "./components/Admin.jsx";
+import Roundel from "./components/Roundel.jsx";
 
 const TABS = [
+  { key: "overview", label: "Overview" },
+  { key: "analysis", label: "Analysis" },
+  { key: "values", label: "Values" },
   { key: "synthesis", label: "Synthesis" },
   { key: "objectives", label: "Objectives" },
   { key: "development", label: "Development" },
@@ -20,7 +27,7 @@ export default function App() {
   const [view, setView] = useState("loading");
   const [route, setRoute] = useState(window.location.hash === "#admin" ? "admin" : "app");
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState("synthesis");
+  const [tab, setTab] = useState("overview");
   const [results, setResults] = useState({ synthesis: null, objectives: null, development: null });
   const [loading, setLoading] = useState({ synthesis: false, objectives: false, development: false });
   const [errors, setErrors] = useState({ synthesis: null, objectives: null, development: null });
@@ -151,7 +158,13 @@ export default function App() {
   return (
     <div className="shell">
       <header className="header">
-        <h1>AIMOS 360º Review</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Roundel size={36} />
+          <div>
+            <h1 style={{ lineHeight: 1.1 }}>AIMOS 360º Review</h1>
+            <div className="muted" style={{ fontSize: 12 }}>Manifest's appraisal dashboard</div>
+          </div>
+        </div>
         <div className="who">
           {me?.isAdmin && <a href="#admin" style={{ marginRight: 12 }}>Admin</a>}
           {me?.email} <button className="btn btn-secondary" style={{ marginLeft: 8 }} onClick={signOut}>Sign out</button>
@@ -164,7 +177,7 @@ export default function App() {
             setData(d);
             setResults({ synthesis: null, objectives: null, development: null });
             setErrors({ synthesis: null, objectives: null, development: null });
-            setTab("synthesis");
+            setTab("overview");
           }}
         />
       )}
@@ -199,6 +212,9 @@ export default function App() {
             ))}
           </div>
 
+          {tab === "overview" && <Overview data={data} />}
+          {tab === "analysis" && <Analysis data={data} />}
+          {tab === "values" && <Values data={data} />}
           {tab === "synthesis" && (
             <Synthesis
               result={results.synthesis}
